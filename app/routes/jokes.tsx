@@ -1,14 +1,7 @@
-import type {
-  LinksFunction,
-  LoaderFunction,
-} from "@remix-run/node";
+import type { LinksFunction, LoaderFunction } from "@remix-run/node";
 import type { Joke } from "@prisma/client";
 import { json } from "@remix-run/node";
-import {
-  Link,
-  Outlet,
-  useLoaderData,
-} from "@remix-run/react";
+import { Link, Outlet, useLoaderData } from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
 import stylesUrl from "~/styles/jokes.css";
@@ -18,13 +11,16 @@ export const links: LinksFunction = () => {
 };
 
 type LoaderData = {
-  jokeListItems: Array<Joke>;
+  jokeListItems: Array<Pick<Joke, "id" | "name" | "content">>;
 };
 
 export const loader: LoaderFunction = async () => {
-  const data: LoaderData = {
-    jokeListItems: await db.joke.findMany(),
-  };
+  let jokeListItems = await db.joke.findMany({
+    take: 5,
+    select: { id: true, name: true, content: true },
+    orderBy: { createdAt: "desc" },
+  });
+  const data: LoaderData = { jokeListItems };
   return json(data);
 };
 
@@ -36,11 +32,7 @@ export default function JokesRoute() {
       <header className="jokes-header">
         <div className="container">
           <h1 className="home-link">
-            <Link
-              to="/"
-              title="Remix Jokes"
-              aria-label="Remix Jokes"
-            >
+            <Link to="/" title="Remix Jokes" aria-label="Remix Jokes">
               <span className="logo">🤪</span>
               <span className="logo-medium">J🤪KES</span>
             </Link>
