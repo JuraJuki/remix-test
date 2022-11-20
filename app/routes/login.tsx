@@ -1,10 +1,21 @@
-import type { ActionFunction, LinksFunction } from "@remix-run/node";
+import type {
+  ActionFunction,
+  LinksFunction,
+} from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useActionData, Link, useSearchParams } from "@remix-run/react";
+import {
+  useActionData,
+  useSearchParams,
+  Link,
+} from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
+import {
+  createUserSession,
+  login,
+  register,
+} from "~/utils/session.server";
 import stylesUrl from "~/styles/login.css";
-import { createUserSession, login } from "~/utils/session.server";
 
 export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
@@ -23,10 +34,10 @@ function validatePassword(password: unknown) {
 }
 
 function validateUrl(url: any) {
-  console.log(url);
   let urls = ["/jokes", "/", "https://remix.run"];
-  if (urls.includes(url)) return url;
-
+  if (urls.includes(url)) {
+    return url;
+  }
   return "/jokes";
 }
 
@@ -43,21 +54,28 @@ type ActionData = {
   };
 };
 
-const badRequest = (data: ActionData) => json(data, { status: 400 });
+const badRequest = (data: ActionData) =>
+  json(data, { status: 400 });
 
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request,
+}) => {
   const form = await request.formData();
   const loginType = form.get("loginType");
   const username = form.get("username");
   const password = form.get("password");
-  const redirectTo = validateUrl(form.get("redirectTo") || "/jokes");
+  const redirectTo = validateUrl(
+    form.get("redirectTo") || "/jokes"
+  );
   if (
     typeof loginType !== "string" ||
     typeof username !== "string" ||
     typeof password !== "string" ||
     typeof redirectTo !== "string"
   ) {
-    return badRequest({ formError: `Form not submitted correctly.` });
+    return badRequest({
+      formError: `Form not submitted correctly.`,
+    });
   }
 
   const fields = { loginType, username, password };
@@ -71,7 +89,6 @@ export const action: ActionFunction = async ({ request }) => {
   switch (loginType) {
     case "login": {
       const user = await login({ username, password });
-      console.log({ user });
       if (!user) {
         return badRequest({
           fields,
@@ -81,19 +98,29 @@ export const action: ActionFunction = async ({ request }) => {
       return createUserSession(user.id, redirectTo);
     }
     case "register": {
-      const userExists = await db?.user?.findFirst({ where: { username } });
+      const userExists = await db.user.findFirst({
+        where: { username },
+      });
       if (userExists) {
         return badRequest({
           fields,
           formError: `User with username ${username} already exists`,
         });
       }
-      // create the user
-      // create their session and redirect to /jokes
-      return badRequest({ fields, formError: "Not implemented" });
+      const user = await register({ username, password });
+      if (!user) {
+        return badRequest({
+          fields,
+          formError: `Something went wrong trying to create a new user.`,
+        });
+      }
+      return createUserSession(user.id, redirectTo);
     }
     default: {
-      return badRequest({ fields, formError: `Login type invalid` });
+      return badRequest({
+        fields,
+        formError: `Login type invalid`,
+      });
     }
   }
 };
@@ -109,10 +136,14 @@ export default function Login() {
           <input
             type="hidden"
             name="redirectTo"
-            value={searchParams.get("redirectTo") ?? undefined}
+            value={
+              searchParams.get("redirectTo") ?? undefined
+            }
           />
           <fieldset>
-            <legend className="sr-only">Login or Register?</legend>
+            <legend className="sr-only">
+              Login or Register?
+            </legend>
             <label>
               <input
                 type="radio"
@@ -130,7 +161,10 @@ export default function Login() {
                 type="radio"
                 name="loginType"
                 value="register"
-                defaultChecked={actionData?.fields?.loginType === "register"}
+                defaultChecked={
+                  actionData?.fields?.loginType ===
+                  "register"
+                }
               />{" "}
               Register
             </label>
@@ -142,9 +176,13 @@ export default function Login() {
               id="username-input"
               name="username"
               defaultValue={actionData?.fields?.username}
-              aria-invalid={Boolean(actionData?.fieldErrors?.username)}
+              aria-invalid={Boolean(
+                actionData?.fieldErrors?.username
+              )}
               aria-errormessage={
-                actionData?.fieldErrors?.username ? "username-error" : undefined
+                actionData?.fieldErrors?.username
+                  ? "username-error"
+                  : undefined
               }
             />
             {actionData?.fieldErrors?.username ? (
@@ -165,10 +203,14 @@ export default function Login() {
               defaultValue={actionData?.fields?.password}
               type="password"
               aria-invalid={
-                Boolean(actionData?.fieldErrors?.password) || undefined
+                Boolean(
+                  actionData?.fieldErrors?.password
+                ) || undefined
               }
               aria-errormessage={
-                actionData?.fieldErrors?.password ? "password-error" : undefined
+                actionData?.fieldErrors?.password
+                  ? "password-error"
+                  : undefined
               }
             />
             {actionData?.fieldErrors?.password ? (
@@ -183,7 +225,10 @@ export default function Login() {
           </div>
           <div id="form-error-message">
             {actionData?.formError ? (
-              <p className="form-validation-error" role="alert">
+              <p
+                className="form-validation-error"
+                role="alert"
+              >
                 {actionData.formError}
               </p>
             ) : null}
